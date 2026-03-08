@@ -24,6 +24,8 @@ export default function Calculator() {
   const r5 = useRef<BlobPart[]>([]);
   const r6 = useRef<BlobPart[]>([]);
   const r7 = useRef<MediaStream | null>(null);
+  const r8 = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const r9 = useRef(0);
 
   const f0 = async () => {
     try {
@@ -138,6 +140,18 @@ export default function Calculator() {
     } catch {}
   };
 
+  const g0 = () => {
+    r9.current += 1;
+    if (r8.current) clearTimeout(r8.current);
+    r8.current = setTimeout(() => {
+      const n = r9.current;
+      r9.current = 0;
+      if (n === 1) f1();
+      else if (n === 2) f2();
+      else if (n >= 3) f3();
+    }, 350);
+  };
+
   return (
     <main className="flex min-h-[100dvh] flex-col items-center justify-center bg-black select-none overflow-hidden touch-manipulation">
       
@@ -164,6 +178,10 @@ export default function Calculator() {
 
       {a0 && (
         <>
+            <div
+              className="absolute inset-0 z-10"
+              onClick={g0}
+            />
             <div className="absolute top-10 left-6 flex gap-3 z-40 pointer-events-none">
                 {a1 && <div className="w-1.5 h-1.5 rounded-full bg-[#1a0000]" />}
                 {a2 && <div className="w-1.5 h-1.5 rounded-full bg-[#000a1a]" />}
@@ -173,16 +191,7 @@ export default function Calculator() {
                 {a3.length}
                 </div>
             )}
-            <div className="absolute bottom-8 w-full px-6 flex justify-between items-center z-40">
-                <button onClick={f2} className={`w-16 h-16 rounded-full flex items-center justify-center font-mono text-[11px] active:scale-90 transition-all ${a1 ? 'text-[#2a0000]' : 'text-[#0a0a0a]'}`}>
-                C1
-                </button>
-                <button onClick={f3} className={`w-16 h-16 rounded-full flex items-center justify-center font-mono text-[11px] active:scale-90 transition-all ${a2 ? 'text-[#001a2a]' : 'text-[#0a0a0a]'}`}>
-                C2
-                </button>
-                <button onClick={f1} className="w-16 h-16 rounded-full flex items-center justify-center font-mono text-[11px] text-[#0a0a0a] active:bg-[#050505] active:scale-90 transition-all">
-                C3
-                </button>
+            <div className="absolute bottom-8 w-full px-6 flex justify-center gap-16 items-center z-40">
                 <button onClick={() => { if(a3.length > 0) sA4(true) }} className={`w-16 h-16 rounded-full flex items-center justify-center font-mono text-[11px] active:scale-90 transition-all ${a3.length > 0 ? 'text-[#1a1a1a]' : 'text-[#0a0a0a]'}`}>
                 C4
                 </button>
