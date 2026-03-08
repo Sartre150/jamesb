@@ -2,109 +2,140 @@
 
 import { useState, useRef } from "react";
 
-export default function Calculator() {
-  const [a0, sA0] = useState(false);
-  const [b0, sB0] = useState(false);
-  const [c0, sC0] = useState(false);
-  const [d0, sD0] = useState(false);
-  const [e0, sE0] = useState<File[]>([]);
+export default function KGBDevice() {
+  const[isMissionActive, setIsMissionActive] = useState(false);
+  const [showVideo, setShowVideo] = useState(false);
   
-  const r1 = useRef<HTMLVideoElement>(null);
-  const r2 = useRef<HTMLCanvasElement>(null);
-  const r3 = useRef<any>(null);
-  const r4 = useRef<MediaRecorder | null>(null);
-  const r5 = useRef<MediaRecorder | null>(null);
-  const r6 = useRef<BlobPart[]>([]);
-  const r7 = useRef<BlobPart[]>([]);
+  const [isRecordingVideo, setIsRecordingVideo] = useState(false);
+  const [isRecordingAudio, setIsRecordingAudio] = useState(false);
+  const [vault, setVault] = useState<File[]>([]);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const wakeLockRef = useRef<any>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioRecorderRef = useRef<MediaRecorder | null>(null);
+  const chunksRef = useRef<BlobPart[]>([]);
+  const audioChunksRef = useRef<BlobPart[]>([]);
 
-  const fn1 = async () => {
+  const requestWakeLock = async () => {
     try {
-      if ("wakeLock" in navigator) r3.current = await navigator.wakeLock.request("screen");
-    } catch {}
+      if ("wakeLock" in navigator) {
+        wakeLockRef.current = await navigator.wakeLock.request("screen");
+      }
+    } catch (err) {}
   };
 
-  const fn2 = async () => {
+  const startMission = async () => {
     try {
-      const s = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" }, audio: true });
-      if (r1.current) r1.current.srcObject = s;
-      await fn1();
-      sA0(true);
-      sB0(false);
-    } catch {
-      alert("Error de acceso.");
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: "environment" }, 
+        audio: true, 
+      });
+
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+      }
+
+      await requestWakeLock();
+      setIsMissionActive(true);
+      setShowVideo(false);
+    } catch (error) {
+      alert("Comando: Acceso denegado al hardware.");
     }
   };
 
-  const fn3 = () => {
-    if (!r1.current || !r2.current) return;
-    const v = r1.current;
-    const c = r2.current;
-    c.width = v.videoWidth;
-    c.height = v.videoHeight;
-    const x = c.getContext("2d");
-    if (x) {
-      x.drawImage(v, 0, 0, c.width, c.height);
-      c.toBlob((bl) => {
-        if (bl) sE0((p) => [...p, new File([bl], `dt_${Date.now()}.jpg`, { type: "image/jpeg" })]);
+  const executePhoto = () => {
+    if (!videoRef.current || !canvasRef.current) return;
+    const video = videoRef.current;
+    const canvas = canvasRef.current;
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    const ctx = canvas.getContext("2d");
+    if (ctx) {
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      canvas.toBlob((blob) => {
+        if (blob) {
+          const file = new File([blob], `dt_${Date.now()}.jpg`, { type: "image/jpeg" });
+          setVault(prev => [...prev, file]);
+        }
       }, "image/jpeg", 0.9);
     }
-    sB0(true);
-    setTimeout(() => sB0(false), 150);
+    setShowVideo(true);
+    setTimeout(() => setShowVideo(false), 150);
   };
 
-  const fn4 = () => {
-    if (c0) {
-      r4.current?.stop();
-      sC0(false);
+  const executeVideo = () => {
+    if (isRecordingVideo) {
+      mediaRecorderRef.current?.stop();
+      setIsRecordingVideo(false);
     } else {
-      const s = r1.current?.srcObject as MediaStream;
-      if (!s) return;
-      const rec = new MediaRecorder(s);
-      r6.current = [];
-      rec.ondataavailable = (e) => { if (e.data.size > 0) r6.current.push(e.data); };
-      rec.onstop = () => {
-        const bl = new Blob(r6.current, { type: "video/mp4" });
-        sE0((p) => [...p, new File([bl], `dt_${Date.now()}.mp4`, { type: "video/mp4" })]);
+      const stream = videoRef.current?.srcObject as MediaStream;
+      if (!stream) return;
+
+      const recorder = new MediaRecorder(stream);
+      chunksRef.current =[];
+      recorder.ondataavailable = (e) => {
+        if (e.data && e.data.size > 0) chunksRef.current.push(e.data);
       };
-      rec.start();
-      r4.current = rec;
-      sC0(true);
+      recorder.onstop = () => {
+        const mime = recorder.mimeType || 'video/mp4';
+        const blob = new Blob(chunksRef.current, { type: mime });
+        const file = new File([blob], `dt_${Date.now()}.mp4`, { type: mime });
+        setVault(prev => [...prev, file]);
+      };
+
+      recorder.start();
+      mediaRecorderRef.current = recorder;
+      setIsRecordingVideo(true);
     }
   };
 
-  const fn5 = () => {
-    if (d0) {
-      r5.current?.stop();
-      sD0(false);
+  const executeAudio = () => {
+    if (isRecordingAudio) {
+      audioRecorderRef.current?.stop();
+      setIsRecordingAudio(false);
     } else {
-      const s = r1.current?.srcObject as MediaStream;
-      if (!s) return;
-      const at = s.getAudioTracks()[0];
-      const as_ = new MediaStream([at]);
-      const rec = new MediaRecorder(as_);
-      r7.current = [];
-      rec.ondataavailable = (e) => { if (e.data.size > 0) r7.current.push(e.data); };
-      rec.onstop = () => {
-        const bl = new Blob(r7.current, { type: "audio/mp4" });
-        sE0((p) => [...p, new File([bl], `dt_${Date.now()}.m4a`, { type: "audio/mp4" })]);
+      const stream = videoRef.current?.srcObject as MediaStream;
+      if (!stream) return;
+
+      const audioTrack = stream.getAudioTracks()[0];
+      const audioStream = new MediaStream([audioTrack]);
+
+      const recorder = new MediaRecorder(audioStream);
+      audioChunksRef.current =[];
+
+      recorder.ondataavailable = (e) => {
+        if (e.data && e.data.size > 0) audioChunksRef.current.push(e.data);
       };
-      rec.start();
-      r5.current = rec;
-      sD0(true);
+
+      recorder.onstop = () => {
+        const mime = recorder.mimeType || 'audio/mp4';
+        const blob = new Blob(audioChunksRef.current, { type: mime });
+        const file = new File([blob], `dt_${Date.now()}.m4a`, { type: mime });
+        setVault(prev => [...prev, file]);
+      };
+
+      recorder.start();
+      audioRecorderRef.current = recorder;
+      setIsRecordingAudio(true);
     }
   };
 
-  const fn6 = async () => {
-    if (e0.length === 0) return;
+  const exportVault = async () => {
+    if (vault.length === 0) return;
+
     try {
-      if (navigator.canShare && navigator.canShare({ files: e0 })) {
-        await navigator.share({ files: e0, title: "Archivos" });
+      if (navigator.canShare && navigator.canShare({ files: vault })) {
+        await navigator.share({
+          files: vault,
+          title: 'Docs',
+        });
       } else {
-        e0.forEach((f) => {
-          const u = URL.createObjectURL(f);
+        vault.forEach(file => {
+          const url = URL.createObjectURL(file);
           const a = document.createElement("a");
-          a.href = u;
-          a.download = f.name;
+          a.href = url;
+          a.download = file.name;
           document.body.appendChild(a);
           a.click();
           document.body.removeChild(a);
@@ -113,70 +144,79 @@ export default function Calculator() {
     } catch {}
   };
 
-  const fn7 = () => {
-    if (c0) r4.current?.stop();
-    if (d0) r5.current?.stop();
-    const s = r1.current?.srcObject as MediaStream;
-    if (s) s.getTracks().forEach((t) => t.stop());
-    if (r3.current) r3.current.release();
-    sA0(false);
-    sC0(false);
-    sD0(false);
+  const extractAgent = () => {
+    if (isRecordingVideo) mediaRecorderRef.current?.stop();
+    if (isRecordingAudio) audioRecorderRef.current?.stop();
+
+    const stream = videoRef.current?.srcObject as MediaStream;
+    if (stream) stream.getTracks().forEach(track => track.stop());
+    if (wakeLockRef.current) wakeLockRef.current.release();
+    
+    setIsMissionActive(false);
+    setIsRecordingVideo(false);
+    setIsRecordingAudio(false);
+    setVault([]);
   };
 
   return (
-    <main className="flex min-h-[100dvh] flex-col items-center justify-center bg-black select-none overflow-hidden touch-none">
-      {!a0 ? (
+    <main className="flex min-h-[100dvh] flex-col items-center justify-center bg-black select-none overflow-hidden touch-manipulation">
+      {!isMissionActive ? (
         <button
-          onClick={fn2}
+          onClick={startMission}
           className="rounded-full bg-zinc-900 px-8 py-4 text-sm font-semibold tracking-widest text-zinc-500 shadow-xl transition-all active:scale-95"
         >
           INICIAR CALCULO
         </button>
       ) : (
-        <div
-          className="relative w-full h-[100dvh] bg-black flex flex-col justify-between"
-          onDoubleClick={() => sB0(!b0)}
+        <div 
+          className="relative w-full h-[100dvh] bg-black"
+          onDoubleClick={() => setShowVideo(!showVideo)}
         >
-          <canvas ref={r2} className="hidden" />
+          <canvas ref={canvasRef} className="hidden" />
 
           <video
-            ref={r1}
+            ref={videoRef}
             autoPlay
             playsInline
             muted
             className={`absolute inset-0 w-full h-full object-cover pointer-events-none transition-opacity duration-300 ${
-              b0 ? "opacity-25" : "opacity-0"
+              showVideo ? "opacity-25" : "opacity-0"
             }`}
           />
 
-          <div className="absolute top-8 left-4 flex gap-3 z-10">
-            {c0 && <div className="w-2 h-2 rounded-full bg-[#1a1a1a] shadow-[0_0_2px_#333]" />}
-            {d0 && <div className="w-2 h-2 rounded-full bg-[#0a1a2a] shadow-[0_0_2px_#333]" />}
+          <div className="absolute top-6 left-6 flex gap-3 z-10">
+            {isRecordingVideo && <div className="w-2 h-2 rounded-full bg-[#1a1a1a]" />}
+            {isRecordingAudio && <div className="w-2 h-2 rounded-full bg-[#0a1a2a]" />}
           </div>
 
-          {e0.length > 0 && (
-            <div className="absolute top-8 right-4 text-[10px] font-mono text-[#333]">
-              [{e0.length}]
+          {vault.length > 0 && (
+            <div className="absolute top-6 right-6 text-[12px] font-mono text-[#444]">
+              [{vault.length}]
             </div>
           )}
 
-          <div className="absolute bottom-8 w-full px-4 flex justify-between z-10 gap-1">
-            <button onClick={fn4} className={`w-12 h-12 rounded-full border flex items-center justify-center font-mono text-[10px] transition-colors ${c0 ? 'bg-[#111] border-[#333] text-[#444]' : 'bg-[#050505] border-[#0a0a0a] text-[#111]'}`}>
-              C1
+          <div className="absolute bottom-6 w-full px-6 flex justify-between z-20">
+            
+            <button onClick={executeVideo} className={`w-12 h-12 rounded-full border flex items-center justify-center font-mono text-[10px] active:scale-90 transition-all ${isRecordingVideo ? 'bg-[#111] border-[#333] text-[#555]' : 'bg-[#050505] border-[#0a0a0a] text-[#111]'}`}>
+              VID
             </button>
-            <button onClick={fn5} className={`w-12 h-12 rounded-full border flex items-center justify-center font-mono text-[10px] transition-colors ${d0 ? 'bg-[#111] border-[#333] text-[#444]' : 'bg-[#050505] border-[#0a0a0a] text-[#111]'}`}>
-              C2
+
+            <button onClick={executeAudio} className={`w-12 h-12 rounded-full border flex items-center justify-center font-mono text-[10px] active:scale-90 transition-all ${isRecordingAudio ? 'bg-[#111] border-[#333] text-[#555]' : 'bg-[#050505] border-[#0a0a0a] text-[#111]'}`}>
+              AUD
             </button>
-            <button onClick={fn3} className="w-12 h-12 rounded-full bg-[#050505] border border-[#0a0a0a] text-[#111] flex items-center justify-center font-mono text-[10px] active:bg-[#111]">
-              C3
+
+            <button onClick={executePhoto} className="w-12 h-12 rounded-full bg-[#050505] border border-[#0a0a0a] text-[#111] flex items-center justify-center font-mono text-[10px] active:bg-[#1a1a1a] active:scale-90 transition-all">
+              FOT
             </button>
-            <button onClick={fn6} className={`w-12 h-12 rounded-full border flex items-center justify-center font-mono text-[10px] transition-colors ${e0.length > 0 ? 'bg-[#0a0a0a] border-[#222] text-[#444]' : 'bg-[#050505] border-[#0a0a0a] text-[#111]'}`}>
-              C4
+
+            <button onClick={exportVault} className={`w-12 h-12 rounded-full border flex items-center justify-center font-mono text-[10px] active:scale-90 transition-all ${vault.length > 0 ? 'bg-[#0a0a0a] border-[#222] text-[#555]' : 'bg-[#050505] border-[#0a0a0a] text-[#111]'}`}>
+              EXP
             </button>
-            <button onClick={fn7} className="w-12 h-12 rounded-full bg-[#080000] border border-[#1a0000] text-[#2a0000] flex items-center justify-center font-mono text-[10px] active:bg-[#200]">
-              C5
+
+            <button onClick={extractAgent} className="w-12 h-12 rounded-full bg-[#080000] border border-[#1a0000] text-[#2a0000] flex items-center justify-center font-mono text-[10px] active:bg-[#200] active:scale-90 transition-all">
+              FIN
             </button>
+
           </div>
         </div>
       )}
