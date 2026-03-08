@@ -1,11 +1,11 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef } from "react";
 
-export default function SpyGadget() {
-  const[isMissionActive, setIsMissionActive] = useState(false);
-  const [showVideo, setShowVideo] = useState(false);
-  const[isRecordingVideo, setIsRecordingVideo] = useState(false);
+export default function KGBDevice() {
+  const [isMissionActive, setIsMissionActive] = useState(false);
+  const[showVideo, setShowVideo] = useState(false);
+  const [isRecordingVideo, setIsRecordingVideo] = useState(false);
   const [isRecordingAudio, setIsRecordingAudio] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -14,7 +14,6 @@ export default function SpyGadget() {
   const audioRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<BlobPart[]>([]);
   const audioChunksRef = useRef<BlobPart[]>([]);
-  const touchStartRef = useRef({ x: 0, y: 0 });
 
   const requestWakeLock = async () => {
     try {
@@ -22,7 +21,6 @@ export default function SpyGadget() {
         wakeLockRef.current = await navigator.wakeLock.request("screen");
       }
     } catch (err) {
-      console.error("WakeLock falló");
     }
   };
 
@@ -41,11 +39,11 @@ export default function SpyGadget() {
       setIsMissionActive(true);
       setShowVideo(false);
     } catch (error) {
-      alert("Permisos denegados.");
+      alert("Comando central: El objetivo bloqueó los accesos.");
     }
   };
 
-  const downloadFile = (blob: Blob, filename: string) => {
+  const smuggleFile = (blob: Blob, filename: string) => {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.style.display = "none";
@@ -59,7 +57,7 @@ export default function SpyGadget() {
     }, 100);
   };
 
-  const takePhoto = () => {
+  const executePhoto = () => {
     if (!videoRef.current || !canvasRef.current) return;
     const video = videoRef.current;
     const canvas = canvasRef.current;
@@ -71,12 +69,14 @@ export default function SpyGadget() {
     if (ctx) {
       ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
       canvas.toBlob((blob) => {
-        if (blob) downloadFile(blob, `foto_${Date.now()}.jpg`);
+        if (blob) smuggleFile(blob, `kgb_doc_${Date.now()}.jpg`);
       }, "image/jpeg", 0.9);
     }
+    setShowVideo(true);
+    setTimeout(() => setShowVideo(false), 150);
   };
 
-  const toggleVideoRecording = () => {
+  const executeVideo = () => {
     if (isRecordingVideo) {
       mediaRecorderRef.current?.stop();
       setIsRecordingVideo(false);
@@ -93,7 +93,7 @@ export default function SpyGadget() {
       
       recorder.onstop = () => {
         const blob = new Blob(chunksRef.current, { type: "video/mp4" });
-        downloadFile(blob, `video_${Date.now()}.mp4`);
+        smuggleFile(blob, `kgb_vid_${Date.now()}.mp4`);
       };
 
       recorder.start();
@@ -102,7 +102,7 @@ export default function SpyGadget() {
     }
   };
 
-  const toggleAudioRecording = () => {
+  const executeAudio = () => {
     if (isRecordingAudio) {
       audioRecorderRef.current?.stop();
       setIsRecordingAudio(false);
@@ -122,7 +122,7 @@ export default function SpyGadget() {
 
       recorder.onstop = () => {
         const blob = new Blob(audioChunksRef.current, { type: "audio/mp4" });
-        downloadFile(blob, `audio_${Date.now()}.m4a`);
+        smuggleFile(blob, `kgb_aud_${Date.now()}.m4a`);
       };
 
       recorder.start();
@@ -131,7 +131,10 @@ export default function SpyGadget() {
     }
   };
 
-  const endMission = () => {
+  const extractAgent = () => {
+    if (isRecordingVideo) mediaRecorderRef.current?.stop();
+    if (isRecordingAudio) audioRecorderRef.current?.stop();
+
     const stream = videoRef.current?.srcObject as MediaStream;
     if (stream) {
       stream.getTracks().forEach(track => track.stop());
@@ -144,43 +147,19 @@ export default function SpyGadget() {
     setIsRecordingAudio(false);
   };
 
-  const handleTouchStart = (e: React.TouchEvent) => {
-    touchStartRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
-  };
-
-  const handleTouchEnd = (e: React.TouchEvent) => {
-    if (!isMissionActive) return;
-    const endX = e.changedTouches[0].clientX;
-    const endY = e.changedTouches[0].clientY;
-    const diffX = endX - touchStartRef.current.x;
-    const diffY = endY - touchStartRef.current.y;
-
-    if (Math.abs(diffX) > Math.abs(diffY)) {
-      if (diffX > 40) toggleVideoRecording();
-      else if (diffX < -40) toggleAudioRecording();
-    } else {
-      if (diffY > 40) takePhoto();
-      else if (diffY < -40) endMission();
-    }
-  };
-
   return (
-    <main 
-      className="flex min-h-screen flex-col items-center justify-center bg-black transition-all duration-500 select-none"
-    >
+    <main className="flex min-h-[100dvh] flex-col items-center justify-center bg-black select-none overflow-hidden touch-none">
       {!isMissionActive ? (
         <button
           onClick={startMission}
-          className="rounded-full bg-zinc-900 px-8 py-4 text-sm font-semibold tracking-widest text-zinc-500 shadow-xl transition-all hover:bg-zinc-800 focus:outline-none active:scale-95"
+          className="rounded-full bg-zinc-900 px-8 py-4 text-sm font-semibold tracking-widest text-zinc-500 shadow-xl transition-all active:scale-95"
         >
           INICIAR CALCULO
         </button>
       ) : (
         <div 
-          className="relative w-full h-screen bg-black flex items-center justify-center overflow-hidden"
+          className="relative w-full h-[100dvh] bg-black flex flex-col justify-between"
           onDoubleClick={() => setShowVideo(!showVideo)}
-          onTouchStart={handleTouchStart}
-          onTouchEnd={handleTouchEnd}
         >
           <canvas ref={canvasRef} className="hidden" />
 
@@ -189,14 +168,46 @@ export default function SpyGadget() {
             autoPlay
             playsInline
             muted
-            className={`w-full h-full object-cover transition-opacity duration-300 pointer-events-none ${
-              showVideo ? "opacity-30" : "opacity-0"
+            className={`absolute inset-0 w-full h-full object-cover pointer-events-none transition-opacity duration-300 ${
+              showVideo ? "opacity-25" : "opacity-0"
             }`}
           />
 
-          <div className="absolute top-4 left-4 flex gap-2 opacity-50">
-            {isRecordingVideo && <div className="w-2 h-2 rounded-full bg-[#1a1a1a]" />}
-            {isRecordingAudio && <div className="w-2 h-2 rounded-full bg-[#0a1a2a]" />}
+          <div className="absolute top-8 left-4 flex gap-3 z-10">
+            {isRecordingVideo && <div className="w-2 h-2 rounded-full bg-[#1a1a1a] shadow-[0_0_2px_#333]" />}
+            {isRecordingAudio && <div className="w-2 h-2 rounded-full bg-[#0a1a2a] shadow-[0_0_2px_#333]" />}
+          </div>
+
+          <div className="absolute bottom-8 w-full px-6 flex justify-between z-10">
+            
+            <button 
+              onClick={executeVideo} 
+              className={`w-14 h-14 rounded-full border flex items-center justify-center font-mono text-xs transition-colors ${isRecordingVideo ? 'bg-[#111] border-[#333] text-[#444]' : 'bg-[#050505] border-[#0a0a0a] text-[#111]'}`}
+            >
+              VID
+            </button>
+
+            <button 
+              onClick={executeAudio} 
+              className={`w-14 h-14 rounded-full border flex items-center justify-center font-mono text-xs transition-colors ${isRecordingAudio ? 'bg-[#111] border-[#333] text-[#444]' : 'bg-[#050505] border-[#0a0a0a] text-[#111]'}`}
+            >
+              AUD
+            </button>
+
+            <button 
+              onClick={executePhoto} 
+              className="w-14 h-14 rounded-full bg-[#050505] border border-[#0a0a0a] text-[#111] flex items-center justify-center font-mono text-xs active:bg-[#111]"
+            >
+              FOT
+            </button>
+
+            <button 
+              onClick={extractAgent} 
+              className="w-14 h-14 rounded-full bg-[#080000] border border-[#1a0000] text-[#2a0000] flex items-center justify-center font-mono text-xs active:bg-[#200]"
+            >
+              FIN
+            </button>
+
           </div>
         </div>
       )}
