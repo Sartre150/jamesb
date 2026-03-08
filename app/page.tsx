@@ -1,304 +1,222 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef } from "react";
 
-type VaultItem = {
+type T0 = {
   id: number;
   url: string;
   type: "photo" | "video" | "audio";
   name: string;
+  mime: string;
 };
 
-export default function KGBDevice() {
-  const [logs, setLogs] = useState<string[]>([]);
-  const addLog = (msg: string) => {
-    setLogs(prev => [msg, ...prev].slice(0, 5));
-    console.log(msg);
-  };
+export default function Calculator() {
+  const [a0, sA0] = useState(false);
+  const [a1, sA1] = useState(false);
+  const [a2, sA2] = useState(false);
+  const [a3, sA3] = useState<T0[]>([]);
+  const [a4, sA4] = useState(false);
+  const r0 = useRef<HTMLVideoElement>(null);
+  const r1 = useRef<HTMLCanvasElement>(null);
+  const r2 = useRef<any>(null);
+  const r3 = useRef<MediaRecorder | null>(null);
+  const r4 = useRef<MediaRecorder | null>(null);
+  const r5 = useRef<BlobPart[]>([]);
+  const r6 = useRef<BlobPart[]>([]);
+  const r7 = useRef<MediaStream | null>(null);
 
-  const [isMissionActive, setIsMissionActive] = useState(false);
-  const [showVideo, setShowVideo] = useState(false);
-  const [isRecordingVideo, setIsRecordingVideo] = useState(false);
-  const [isRecordingAudio, setIsRecordingAudio] = useState(false);
-  const [vault, setVault] = useState<VaultItem[]>([]);
-  const [showDarkRoom, setShowDarkRoom] = useState(false);
-
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const wakeLockRef = useRef<any>(null);
-  
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const audioRecorderRef = useRef<MediaRecorder | null>(null);
-  const chunksRef = useRef<BlobPart[]>([]);
-  const audioChunksRef = useRef<BlobPart[]>([]);
-  const streamRef = useRef<MediaStream | null>(null);
-
-  const startMission = async () => {
-    addLog("Iniciando protocolos...");
+  const f0 = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
         video: { facingMode: "environment" },
         audio: true,
       });
       
-      addLog("Hardware conectado.");
-      
-      streamRef.current = stream;
-
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        videoRef.current.play().catch(() => {});
-        addLog("Video inyectado en pantalla.");
-      } else {
-        addLog("ERROR CRÍTICO: Ref de video perdido.");
+      r7.current = stream;
+      if (r0.current) {
+        r0.current.srcObject = stream;
+        r0.current.play().catch(() => {});
       }
-
       if ("wakeLock" in navigator) {
-        try {
-          wakeLockRef.current = await navigator.wakeLock.request("screen");
-        } catch (e) {}
+        try { r2.current = await navigator.wakeLock.request("screen"); } catch {}
       }
-
-      setIsMissionActive(true);
-
-    } catch (err: any) {
-      addLog(`ERROR ACCESO: ${err.message}`);
-      alert("Permisos denegados. Reinicia la app.");
+      sA0(true);
+    } catch {
+      alert("Error de acceso.");
     }
   };
 
-  const executePhoto = () => {
+  const f1 = () => {
+    const v = r0.current;
+    const c = r1.current;
+    if (!v || !c || v.readyState === 0) return;
+    c.width = v.videoWidth;
+    c.height = v.videoHeight;
+    const x = c.getContext("2d");
+    if (x) {
+      x.drawImage(v, 0, 0, c.width, c.height);
+      c.toBlob((bl) => {
+        if (bl) {
+          const u = URL.createObjectURL(bl);
+          sA3(p => [...p, { id: Date.now(), url: u, type: "photo", name: `d1_${Date.now()}.jpg`, mime: "image/jpeg" }]);
+        }
+      }, "image/jpeg", 0.9);
+    }
+  };
+
+  const f2 = () => {
+    if (a1) {
+      r3.current?.stop();
+      sA1(false);
+    } else {
+      const s = r7.current;
+      if (!s) return;
+      const rec = new MediaRecorder(s);
+      r5.current = [];
+      rec.ondataavailable = (e) => { if (e.data && e.data.size > 0) r5.current.push(e.data); };
+      rec.onstop = () => {
+        const t = rec.mimeType || "video/mp4";
+        const bl = new Blob(r5.current, { type: t });
+        if (bl.size > 0) {
+          const u = URL.createObjectURL(bl);
+          sA3(p => [...p, { id: Date.now(), url: u, type: "video", name: `d2_${Date.now()}.mp4`, mime: t }]);
+        }
+      };
+      rec.start(1000);
+      r3.current = rec;
+      sA1(true);
+    }
+  };
+
+  const f3 = () => {
+    if (a2) {
+      r4.current?.stop();
+      sA2(false);
+    } else {
+      const s = r7.current;
+      if (!s) return;
+      const at = s.getAudioTracks()[0];
+      const as_ = new MediaStream([at]);
+      const rec = new MediaRecorder(as_);
+      r6.current = [];
+      rec.ondataavailable = (e) => { if (e.data.size > 0) r6.current.push(e.data); };
+      rec.onstop = () => {
+        const t = rec.mimeType || "audio/mp4";
+        const bl = new Blob(r6.current, { type: t });
+        const u = URL.createObjectURL(bl);
+        sA3(p => [...p, { id: Date.now(), url: u, type: "audio", name: `d3_${Date.now()}.m4a`, mime: t }]);
+      };
+      rec.start(1000);
+      r4.current = rec;
+      sA2(true);
+    }
+  };
+
+  const f4 = () => {
+    if (a1) r3.current?.stop();
+    if (a2) r4.current?.stop();
+    if (r7.current) r7.current.getTracks().forEach(t => t.stop());
+    if (r2.current) r2.current.release();
+    sA0(false);
+    sA3([]);
+    sA4(false);
+  };
+
+  const f5 = async (item: T0) => {
     try {
-      const video = videoRef.current;
-      const canvas = canvasRef.current;
-
-      if (!video || !canvas) {
-        addLog("Error: Sistema visual no encontrado");
-        return;
+      const res = await fetch(item.url);
+      const bl = await res.blob();
+      const file = new File([bl], item.name, { type: item.mime });
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        await navigator.share({ files: [file], title: "Archivos" });
+      } else {
+        const a = document.createElement("a");
+        a.href = item.url;
+        a.download = item.name;
+        a.click();
       }
-      
-      if (video.readyState === 0) {
-        addLog("Cámara cargando... intenta de nuevo");
-        return;
-      }
-
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
-      const ctx = canvas.getContext("2d");
-      
-      if (ctx) {
-        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-        canvas.toBlob((blob) => {
-          if (blob) {
-            const url = URL.createObjectURL(blob);
-            setVault(prev => [...prev, { id: Date.now(), url, type: "photo", name: `FOT_${Date.now()}.jpg` }]);
-            addLog(`Foto Capturada [${Math.round(blob.size/1024)}KB]`);
-          }
-        }, "image/jpeg", 0.9);
-      }
-      
-      setShowVideo(true);
-      setTimeout(() => setShowVideo(false), 150);
-    } catch (e: any) {
-      addLog(`Error FOT: ${e.message}`);
-    }
-  };
-
-  const executeVideo = () => {
-    if (isRecordingVideo) {
-      mediaRecorderRef.current?.stop();
-      setIsRecordingVideo(false);
-      addLog("Finalizando video...");
-    } else {
-      try {
-        const stream = streamRef.current;
-        
-        if (!stream) {
-           addLog("Error Fatal: No hay señal de cámara");
-           return;
-        }
-
-        const recorder = new MediaRecorder(stream);
-        chunksRef.current = [];
-        
-        recorder.ondataavailable = (e) => {
-          if (e.data && e.data.size > 0) chunksRef.current.push(e.data);
-        };
-        
-        recorder.onstop = () => {
-          const type = recorder.mimeType || "video/mp4";
-          const blob = new Blob(chunksRef.current, { type });
-          if (blob.size > 0) {
-            const url = URL.createObjectURL(blob);
-            setVault(prev => [...prev, { id: Date.now(), url, type: "video", name: `VID_${Date.now()}.mp4` }]);
-            addLog(`Video Guardado [${Math.round(blob.size/1024)}KB]`);
-          } else {
-            addLog("Error: Grabación vacía");
-          }
-        };
-
-        recorder.start(1000);
-        mediaRecorderRef.current = recorder;
-        setIsRecordingVideo(true);
-        addLog("GRABANDO VIDEO...");
-        
-      } catch (e: any) {
-        addLog(`Error VID: ${e.message}`);
-      }
-    }
-  };
-
-  const executeAudio = () => {
-    if (isRecordingAudio) {
-      audioRecorderRef.current?.stop();
-      setIsRecordingAudio(false);
-      addLog("Finalizando audio...");
-    } else {
-      try {
-        const stream = streamRef.current;
-        if (!stream) {
-            addLog("Error: Sin señal de micro");
-            return;
-        }
-
-        const audioTrack = stream.getAudioTracks()[0];
-        const audioStream = new MediaStream([audioTrack]);
-        const recorder = new MediaRecorder(audioStream);
-        audioChunksRef.current = [];
-
-        recorder.ondataavailable = (e) => {
-          if (e.data.size > 0) audioChunksRef.current.push(e.data);
-        };
-
-        recorder.onstop = () => {
-          const type = recorder.mimeType || "audio/mp4";
-          const blob = new Blob(audioChunksRef.current, { type });
-          const url = URL.createObjectURL(blob);
-          setVault(prev => [...prev, { id: Date.now(), url, type: "audio", name: `AUD_${Date.now()}.m4a` }]);
-          addLog(`Audio Guardado [${Math.round(blob.size/1024)}KB]`);
-        };
-
-        recorder.start(1000);
-        audioRecorderRef.current = recorder;
-        setIsRecordingAudio(true);
-        addLog("GRABANDO AUDIO...");
-
-      } catch (e: any) {
-        addLog(`Error AUD: ${e.message}`);
-      }
-    }
-  };
-
-  const extractAgent = () => {
-    if (isRecordingVideo) mediaRecorderRef.current?.stop();
-    if (isRecordingAudio) audioRecorderRef.current?.stop();
-    if (streamRef.current) {
-        streamRef.current.getTracks().forEach(track => track.stop());
-    }
-    
-    if (wakeLockRef.current) wakeLockRef.current.release();
-    
-    setIsMissionActive(false);
-    setLogs([]);
-    setVault([]);
-    setShowDarkRoom(false);
+    } catch {}
   };
 
   return (
     <main className="flex min-h-[100dvh] flex-col items-center justify-center bg-black select-none overflow-hidden touch-manipulation">
       
       <video
-        ref={videoRef}
+        ref={r0}
         autoPlay
         playsInline
         muted
-        className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-300 pointer-events-none ${
-          isMissionActive ? (showVideo ? "opacity-30" : "opacity-0") : "opacity-0"
-        }`}
-        style={{ zIndex: 0 }} 
+        className="absolute inset-0 w-full h-full object-cover opacity-0 pointer-events-none"
+        style={{ zIndex: 0 }}
       />
-      
-      <canvas ref={canvasRef} className="hidden" />
+      <canvas ref={r1} className="hidden" />
 
-      {!isMissionActive && (
+      {!a0 && (
         <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-black">
              <button
-                onClick={startMission}
-                className="rounded-full bg-zinc-900 px-8 py-4 text-sm font-semibold tracking-widest text-zinc-500 shadow-xl active:scale-95"
+                onClick={f0}
+                className="rounded-full bg-[#050505] px-12 py-6 text-xs font-semibold tracking-widest text-[#111] shadow-xl active:bg-[#0a0a0a] transition-all"
             >
-                INICIAR CALCULO
+                INICIAR
             </button>
-            <div className="mt-4 text-[10px] text-green-800 font-mono h-6">{logs[0]}</div>
         </div>
       )}
 
-      {isMissionActive && (
+      {a0 && (
         <>
-
-            <div className="absolute top-0 left-0 w-full p-2 bg-gradient-to-b from-black to-transparent z-40 pointer-events-none">
-                {logs.map((log, i) => (
-                    <p key={i} className="text-[10px] text-green-500 font-mono leading-tight opacity-70 shadow-black drop-shadow-md">
-                        {`> ${log}`}
-                    </p>
-                ))}
+            <div className="absolute top-10 left-6 flex gap-3 z-40 pointer-events-none">
+                {a1 && <div className="w-1.5 h-1.5 rounded-full bg-[#1a0000]" />}
+                {a2 && <div className="w-1.5 h-1.5 rounded-full bg-[#000a1a]" />}
             </div>
-
-            <div className="absolute top-14 left-4 flex gap-3 z-40 opacity-50 pointer-events-none">
-                {isRecordingVideo && <div className="w-3 h-3 rounded-full bg-red-600 animate-pulse shadow-[0_0_10px_red]" />}
-                {isRecordingAudio && <div className="w-3 h-3 rounded-full bg-blue-600 animate-pulse shadow-[0_0_10px_blue]" />}
-            </div>
-
-            {vault.length > 0 && (
-                <div className="absolute top-14 right-4 text-xs font-mono text-zinc-500 z-40 pointer-events-none">
-                [{vault.length}]
+            {a3.length > 0 && (
+                <div className="absolute top-10 right-6 text-[10px] font-mono text-[#0a0a0a] z-40 pointer-events-none">
+                {a3.length}
                 </div>
             )}
-
-            <div className="absolute bottom-8 w-full px-4 flex justify-between items-center z-40">
-                <button onClick={executeVideo} className={`w-14 h-14 rounded-full border flex items-center justify-center font-mono text-[10px] active:scale-90 transition-all ${isRecordingVideo ? 'bg-zinc-900 border-zinc-500 text-red-500' : 'bg-black border-zinc-800 text-zinc-600'}`}>
-                VID
+            <div className="absolute bottom-8 w-full px-6 flex justify-between items-center z-40">
+                <button onClick={f2} className={`w-16 h-16 rounded-full flex items-center justify-center font-mono text-[11px] active:scale-90 transition-all ${a1 ? 'text-[#2a0000]' : 'text-[#0a0a0a]'}`}>
+                C1
                 </button>
-
-                <button onClick={executeAudio} className={`w-14 h-14 rounded-full border flex items-center justify-center font-mono text-[10px] active:scale-90 transition-all ${isRecordingAudio ? 'bg-zinc-900 border-zinc-500 text-blue-500' : 'bg-black border-zinc-800 text-zinc-600'}`}>
-                AUD
+                <button onClick={f3} className={`w-16 h-16 rounded-full flex items-center justify-center font-mono text-[11px] active:scale-90 transition-all ${a2 ? 'text-[#001a2a]' : 'text-[#0a0a0a]'}`}>
+                C2
                 </button>
-
-                <button onClick={executePhoto} className="w-14 h-14 rounded-full bg-black border border-zinc-800 text-zinc-600 flex items-center justify-center font-mono text-[10px] active:bg-zinc-900 active:scale-90">
-                FOT
+                <button onClick={f1} className="w-16 h-16 rounded-full flex items-center justify-center font-mono text-[11px] text-[#0a0a0a] active:bg-[#050505] active:scale-90 transition-all">
+                C3
                 </button>
-
-                <button onClick={() => { if(vault.length > 0) setShowDarkRoom(true) }} className={`w-14 h-14 rounded-full border flex items-center justify-center font-mono text-[10px] active:scale-90 transition-all ${vault.length > 0 ? 'bg-zinc-900 border-zinc-500 text-white' : 'bg-black border-zinc-800 text-zinc-600'}`}>
-                EXP
+                <button onClick={() => { if(a3.length > 0) sA4(true) }} className={`w-16 h-16 rounded-full flex items-center justify-center font-mono text-[11px] active:scale-90 transition-all ${a3.length > 0 ? 'text-[#1a1a1a]' : 'text-[#0a0a0a]'}`}>
+                C4
                 </button>
-
-                <button onClick={extractAgent} className="w-14 h-14 rounded-full bg-[#110000] border border-[#330000] text-[#550000] flex items-center justify-center font-mono text-[10px] active:bg-red-950 active:scale-90">
-                FIN
+                <button onClick={f4} className="w-16 h-16 rounded-full flex items-center justify-center font-mono text-[11px] text-[#110000] active:bg-[#050000] active:scale-90 transition-all">
+                C5
                 </button>
             </div>
         </>
       )}
 
-      {showDarkRoom && (
-        <div className="fixed inset-0 z-[100] bg-[#050505] flex flex-col items-center pt-10 px-4 overflow-y-auto">
-          <h2 className="text-zinc-400 font-mono text-xs mb-2 tracking-widest">BÓVEDA DE EVIDENCIA</h2>
-          <p className="text-zinc-600 font-mono text-[9px] mb-8 text-center">
-            MANTÉN PRESIONADO PARA GUARDAR
-          </p>
-          
-          <div className="w-full max-w-lg flex flex-col gap-6 pb-32">
-            {vault.map(item => (
-              <div key={item.id} className="w-full bg-black border border-zinc-900 rounded p-2 shadow-2xl">
-                <p className="text-zinc-700 text-[9px] mb-2 font-mono text-right">{item.name}</p>
-                {item.type === "photo" && <img src={item.url} className="w-full h-auto rounded opacity-80" />}
-                {item.type === "video" && <video src={item.url} controls playsInline className="w-full h-auto rounded opacity-80" />}
-                {item.type === "audio" && <audio src={item.url} controls className="w-full mt-2 opacity-80" />}
+      {a4 && (
+        <div className="fixed inset-0 z-[100] bg-[#000000] flex flex-col items-center pt-10 px-4 overflow-y-auto pb-32">
+          <div className="w-full max-w-lg flex flex-col gap-8">
+            {a3.map(item => (
+              <div key={item.id} className="w-full bg-[#050505] rounded-xl p-4 flex flex-col items-center shadow-2xl">
+                <div className="w-full mb-4">
+                  {item.type === "photo" && <img src={item.url} className="w-full h-auto rounded-lg opacity-90" />}
+                  {item.type === "video" && <video src={item.url} controls playsInline className="w-full h-auto rounded-lg opacity-90" />}
+                  {item.type === "audio" && <audio src={item.url} controls className="w-full opacity-90" />}
+                </div>
+                <button
+                  onClick={() => f5(item)}
+                  className="w-full bg-[#111] hover:bg-[#222] active:scale-95 transition-all text-zinc-400 font-mono text-[11px] py-4 rounded-lg flex items-center justify-center gap-2"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                  GUARDAR EN EL DISPOSITIVO
+                </button>
+
               </div>
             ))}
           </div>
-
-          <button 
-            onClick={() => setShowDarkRoom(false)} 
-            className="fixed bottom-10 bg-zinc-900 border border-zinc-700 text-zinc-400 font-mono text-[10px] px-8 py-3 rounded-full shadow-xl active:bg-black"
+          <button
+            onClick={() => sA4(false)}
+            className="fixed bottom-10 bg-[#111] border border-[#222] text-zinc-500 font-mono text-[10px] px-10 py-4 rounded-full shadow-2xl active:scale-95 transition-all"
           >
             VOLVER
           </button>
